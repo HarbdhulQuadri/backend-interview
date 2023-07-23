@@ -4,7 +4,7 @@ import loginSchema from './loginSchema';
 
 export default {
   register: {
-    handler: `${handlerPath(__dirname)}/handler.register`,
+    handler: `${handlerPath(__dirname)}/handler.signup`,
     events: [
       {
         http: {

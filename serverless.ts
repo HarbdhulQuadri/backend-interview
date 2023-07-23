@@ -12,11 +12,19 @@ const serverlessConfiguration: AWS = {
       minimumCompressionSize: 1024,
       shouldStartNameWithService: true,
     },
+    iamRoleStatements: [
+      {
+        Effect: 'Allow',
+        Action: 'dynamodb:*', // All DynamoDB actions
+        Resource: 'arn:aws:dynamodb:us-east-1:221368609253:table/*', // Replace YOUR_ACCOUNT_ID with your actual AWS account ID
+      },
+    ],
     environment: {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       NODE_OPTIONS: '--enable-source-maps --stack-trace-limit=1000',
     },
   },
+
   resources: {
     Resources: {
       UsersTable: {
@@ -27,7 +35,7 @@ const serverlessConfiguration: AWS = {
             { AttributeName: 'email', AttributeType: 'S' },
           ],
           KeySchema: [
-            { AttributeName: 'em', KeyType: 'HASH' },
+            { AttributeName: 'email', KeyType: 'HASH' },
           ],
           ProvisionedThroughput: {
             ReadCapacityUnits: 1,
