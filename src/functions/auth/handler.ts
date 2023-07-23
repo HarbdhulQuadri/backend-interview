@@ -1,14 +1,34 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import bcrypt from 'bcryptjs';
 import { DynamoDB } from 'aws-sdk';
-import {sign} from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
+import { CustomAPIGatewayProxyEvent } from './middleware'; // Import the custom type
+import { authenticateMiddleware } from './middleware';
 
 
 const dynamoDb = new DynamoDB.DocumentClient();
+const PRODUCTS_TABLE = 'ProductsTable'; 
+
 const USERS_TABLE = 'UsersTable';
 const HASH_SALT_ROUNDS = 10;
-const JWT_SECRET = 'your-jdygegdy373ihuojw,dokow,dwumduygy3i38hdhebduehb-key'; // Replace this with your actual secret key
+const JWT_SECRET = 'your-jdygegdy373ihuojw,dokow,dwumduygy3i38hdhebduehb-key'; 
 
+
+interface SignupRequestBody {
+  email: string;
+  name: string;
+  password: string;
+  address: string;
+}
+
+interface LoginRequestBody {
+  email: string;
+  password: string;
+}
+interface CreateProductRequestBody {
+  name: string;
+  price: number;
+}
 
 // Helper function to create a user in DynamoDB
 async function createUser(user: { email: string; password: string; name:string; address:string }): Promise<void> {
@@ -39,17 +59,7 @@ async function getUserByEmail(email: string): Promise<any | null> {
   }
 }
 
-interface SignupRequestBody {
-  email: string;
-  name: string;
-  password: string;
-  address: string;
-}
 
-interface LoginRequestBody {
-  email: string;
-  password: string;
-}
 
 
 export const signup: APIGatewayProxyHandler = async (event) => {
@@ -74,7 +84,7 @@ export const signup: APIGatewayProxyHandler = async (event) => {
 
     // Generate and sign a JWT token
     const payload = { email: requestBody.email, password: hashedPassword,name: requestBody.name,address: requestBody.address}; // Include any user data you want in the payload
-    const token = sign(payload, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 
     return {
       statusCode: 200,
@@ -108,7 +118,7 @@ export const login: APIGatewayProxyHandler = async (event) => {
 
     // Generate and sign a JWT token
     const payload = { email: requestBody.email }; // Include any user data you want in the payload
-    const token = sign(payload, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 
     return {
       statusCode: 200,
@@ -121,3 +131,48 @@ export const login: APIGatewayProxyHandler = async (event) => {
     };
   }
 };
+export const createProduct: APIGatewayProxyHandler = async (
+  event: CustomAPIGatewayProxyEvent // Update the function signature to accept only the 'event' parameter
+): Promise<APIGatewayProxyResult> => { // Make sure to set the return type as Promise<APIGatewayProxyResult>
+  try {
+    // Use the authenticateMiddleware to verify the user's token and get the email
+    const authenticatedEvent = await authenticateMiddleware(event);
+
+    const requestBody: CreateProductRequestBody = JSON.parse(authenticatedEvent.body);
+
+    const product = {
+      id: Math.random().toString(36).substr(2, 9), // Generate a random ID for the product
+      name: requestBody.name,
+      price: requestBody.price,
+      createdBy: authenticatedEvent.email, // Use the extracted email from the token as the createdBy field
+    };
+
+    // Save the product to DynamoDB
+    await saveProductToDynamoDB(product);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Product created successfully.', product }),
+    };
+  } catch (error) {
+    console.error('Error creating product:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error' }),
+    };
+  }
+};
+// Helper function to save the product to DynamoDB
+async function saveProductToDynamoDB(product: any): Promise<void> {
+  const params = {
+    TableName: PRODUCTS_TABLE,
+    Item: product,
+  };
+
+  try {
+    await dynamoDb.put(params).promise();
+  } catch (error) {
+    console.error('Error saving product to DynamoDB:', error);
+    throw error;
+  }
+}

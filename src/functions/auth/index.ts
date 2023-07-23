@@ -1,6 +1,8 @@
 import { handlerPath } from '@libs/handler-resolver';
 import registerSchema from './registerSchema';
 import loginSchema from './loginSchema';
+import productsSchema from './productsSchema';
+
 
 export default {
   register: {
@@ -29,6 +31,22 @@ export default {
           request: {
             schemas: {
               'application/json': loginSchema,
+            },
+          },
+        },
+      },
+    ],
+  },
+  createProduct: {
+    handler:  `${handlerPath(__dirname)}/handler.createProduct`,
+    events: [
+      {
+        http: {
+          method: 'post',
+          path: 'products', 
+          request: {
+            schemas: {
+              'application/json': productsSchema,
             },
           },
         },

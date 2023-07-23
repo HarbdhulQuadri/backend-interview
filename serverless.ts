@@ -43,6 +43,23 @@ const serverlessConfiguration: AWS = {
           },
         },
       },
+      ProductsTable: { // Add the ProductsTable configuration here
+        Type: 'AWS::DynamoDB::Table',
+        Properties: {
+          TableName: 'ProductsTable',
+          AttributeDefinitions: [
+            { AttributeName: 'id', AttributeType: 'S' }, // Assuming 'id' is a string
+            { AttributeName: 'name', AttributeType: 'S' }, // Assuming 'name' is a string
+          ],
+          KeySchema: [
+            { AttributeName: 'id', KeyType: 'HASH' }, // Assuming 'id' is the primary key
+          ],
+          ProvisionedThroughput: {
+            ReadCapacityUnits: 1,
+            WriteCapacityUnits: 1,
+          },
+        },
+      },
     },
   },
   
