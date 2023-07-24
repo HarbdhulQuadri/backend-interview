@@ -6,9 +6,20 @@ import * as jwt from 'jsonwebtoken';
 const SECRET_KEY = 'your-secret-key'; // Replace with your actual secret key for JWT
 
 // Define a custom type to include the 'email' property in the event object
+import { APIGatewayProxyResult, Context, Callback } from 'aws-lambda';
+
 export interface CustomAPIGatewayProxyEvent extends APIGatewayProxyEvent {
-  email?: string;
+  email: string;
+  // Add any additional properties that are missing from the base APIGatewayProxyEvent
+  pathParameters: { [name: string]: string } | null;
+  queryStringParameters: { [name: string]: string } | null;
+  multiValueQueryStringParameters: { [name: string]: string[] } | null;
+  stageVariables: { [name: string]: string } | null;
+  // Add any other properties that are used in your code
 }
+
+// Rest of the code remains the same
+
 
 export const authenticateMiddleware = async (
   event: CustomAPIGatewayProxyEvent

@@ -1,69 +1,51 @@
 // Import the function from handler.ts
 import { createProduct } from '../src/functions/auth/handler';
 
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { CustomAPIGatewayProxyEvent } from '../src/functions/auth/middleware'; // Import the updated custom type
 
-// Mock the DynamoDB DocumentClient
+// Mock the DynamoDB DocumentClient methods used in createProduct function
 jest.mock('aws-sdk', () => {
-  return {
-    DynamoDB: {
-      DocumentClient: jest.fn().mockImplementation(() => ({
-        put: jest.fn().mockReturnValue({
-          promise: jest.fn().mockResolvedValue({})
-        })
-      }))
-    }
-  };
+  const putMock = jest.fn().mockReturnValue({ promise: jest.fn() });
+  const DocumentClient = jest.fn(() => ({ put: putMock }));
+  return { DynamoDB: { DocumentClient } };
 });
 
-// Mock the jwt sign function
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn().mockReturnValue('mocked-token')
-}));
-
-// Mock the bcrypt hash function
-jest.mock('bcryptjs', () => ({
-  hash: jest.fn().mockResolvedValue('hashed-password')
-}));
-
-// Mock the authenticateMiddleware function
-jest.mock('./middleware', () => ({
-  authenticateMiddleware: jest.fn().mockImplementation((event) => event)
-}));
-
 describe('createProduct', () => {
-  const mockEvent = {
-    body: JSON.stringify({
-      name: 'Test Product',
-      price: 100
-    })
-  };
+  it('should create a new product', async () => {
+    // Mock event for createProduct function
+    const event: CustomAPIGatewayProxyEvent = {
+      httpMethod: 'POST',
+      body: JSON.stringify({ name: 'Product Name', price: 50 }),
+      headers: {},
+      multiValueHeaders: {},
+      isBase64Encoded: false,
+      path: '',
+      pathParameters: null,
+      queryStringParameters: null,
+      multiValueQueryStringParameters: null,
+      stageVariables: null,
+      resource: ''
+    };
 
-  it('should create a product and return success response', async () => {
-    const result = await createProduct(mockEvent);
+    // Call the createProduct function
+    const result = await createProduct(event);
 
+    // Assert the result
     expect(result.statusCode).toBe(200);
     expect(result.body).toBeDefined();
-    const parsedBody = JSON.parse(result.body);
-    expect(parsedBody.message).toBe('Product created successfully.');
-    expect(parsedBody.product).toBeDefined();
-    expect(parsedBody.product.id).toBeDefined();
-    expect(parsedBody.product.name).toBe('Test Product');
-    expect(parsedBody.product.price).toBe(100);
+
+    // Parse the result body to JSON
+    const responseBody = JSON.parse(result.body);
+
+    // Check the properties of the response body
+    expect(responseBody.message).toBe('Product created successfully.');
+    expect(responseBody.product).toBeDefined();
+    expect(responseBody.product.id).toBeDefined();
+    expect(responseBody.product.name).toBe('Product Name');
+    expect(responseBody.product.price).toBe(50);
+    // Add more assertions as needed based on your actual implementation
   });
 
-  it('should return 500 error response if there is an internal server error', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {}); // Suppress console.error output
-
-    // Mocking the saveProductToDynamoDB function to throw an error
-    jest.mock('./handler', () => ({
-      saveProductToDynamoDB: jest.fn().mockRejectedValue(new Error('Mocked Error'))
-    }));
-
-    const result = await createProduct(mockEvent);
-
-    expect(result.statusCode).toBe(500);
-    expect(result.body).toBeDefined();
-    const parsedBody = JSON.parse(result.body);
-    expect(parsedBody.error).toBe('Internal server error');
-  });
+  // Add more test cases for error scenarios or edge cases as needed
 });

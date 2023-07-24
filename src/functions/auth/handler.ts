@@ -1,4 +1,4 @@
-import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
+import { APIGatewayProxyHandler, APIGatewayProxyResult, Context } from 'aws-lambda';
 import bcrypt from 'bcryptjs';
 import { DynamoDB } from 'aws-sdk';
 import * as jwt from 'jsonwebtoken';
@@ -132,8 +132,9 @@ export const login: APIGatewayProxyHandler = async (event) => {
   }
 };
 export const createProduct: APIGatewayProxyHandler = async (
-  event: CustomAPIGatewayProxyEvent // Update the function signature to accept only the 'event' parameter
-): Promise<APIGatewayProxyResult> => { // Make sure to set the return type as Promise<APIGatewayProxyResult>
+  event: CustomAPIGatewayProxyEvent,
+  context: Context
+) => {
   try {
     // Use the authenticateMiddleware to verify the user's token and get the email
     const authenticatedEvent = await authenticateMiddleware(event);
